@@ -70,6 +70,24 @@ Image::Image(Image&& other) noexcept
     traceBuffer("Image move ctor", pixels);
 }
 
+Image& Image::operator=(const Image& other) {
+    // Item 11: the identity test skips a pointless copy of every pixel.
+    if (this == &other) {
+        return *this;
+    }
+
+    // Allocate first, so a failed allocation leaves this image unchanged.
+    unsigned char* replacement = cloneBuffer(other);
+    delete[] pixels;
+    pixels = replacement;
+    width = other.width;
+    height = other.height;
+    channels = other.channels;
+
+    traceBuffer("Image copy assign", pixels);
+    return *this; // Item 10: lets assignments chain.
+}
+
 int Image::getWidth() const {
     return width;
 }

@@ -21,5 +21,6 @@ paoo = executable(
   'demos/lab4.cpp',
   'demos/lab4_order_a.cpp',
   'demos/lab4_order_b.cpp',
+  'demos/lab5.cpp',
   dependencies: [image_dep, cli11_dep],
 )

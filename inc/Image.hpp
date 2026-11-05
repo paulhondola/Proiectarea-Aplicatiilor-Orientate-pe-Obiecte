@@ -10,8 +10,9 @@ public:
     Image();                                    // empty: 0x0x0, nullptr
     Image(int width, int height, int channels); // zero-filled
     ~Image();
-    Image(const Image& other);     // deep copy
-    Image(Image&& other) noexcept; // takes the buffer; other becomes empty
+    Image(const Image& other);            // deep copy
+    Image(Image&& other) noexcept;        // takes the buffer; other becomes empty
+    Image& operator=(const Image& other); // deep copy; safe for self-assignment
 
     int getWidth() const;
     int getHeight() const;

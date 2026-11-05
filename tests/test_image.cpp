@@ -114,3 +114,78 @@ TEST_CASE("move takes the buffer") {
     CHECK(source.getByteCount() == 0);
     // NOLINTEND(bugprone-use-after-move,clang-analyzer-cplusplus.Move)
 }
+
+static_assert(
+    std::is_same<decltype(std::declval<Image&>() = std::declval<const Image&>()), Image&>::value,
+    "operator= must return Image&");
+
+TEST_CASE("assignment deep-copies across sizes") {
+    Image source(3, 2, 4);
+    source.set(2, 1, 3, 77);
+    Image target(1, 1, 1);
+
+    target = source;
+
+    CHECK(target.getWidth() == 3);
+    CHECK(target.getHeight() == 2);
+    CHECK(target.getChannels() == 4);
+    CHECK(target.at(2, 1, 3) == 77);
+    CHECK(target.getData() != source.getData());
+
+    source.set(2, 1, 3, 1);
+    CHECK(target.at(2, 1, 3) == 77);
+}
+
+TEST_CASE("assignment chains") {
+    const Image c = makeNumbered();
+    Image a(1, 1, 1);
+    Image b(1, 1, 1);
+
+    a = b = c;
+
+    CHECK(isNumbered(a));
+    CHECK(isNumbered(b));
+    CHECK(a.getData() != b.getData());
+    CHECK(b.getData() != c.getData());
+}
+
+TEST_CASE("self-assignment keeps pixels and address") {
+    Image image = makeNumbered();
+    const unsigned char* address = image.getData();
+    const Image& alias = image;
+
+    image = alias;
+
+    CHECK(isNumbered(image));
+    CHECK(image.getData() == address);
+}
+
+TEST_CASE("assigning from empty empties the target") {
+    Image target = makeNumbered();
+    const Image empty;
+
+    target = empty;
+
+    CHECK(target.isEmpty());
+    CHECK(target.getData() == nullptr);
+    CHECK(target.getByteCount() == 0);
+}
+
+TEST_CASE("assigning to an empty target fills it") {
+    Image target;
+    const Image source = makeNumbered();
+
+    target = source;
+
+    CHECK(isNumbered(target));
+}
+
+TEST_CASE("a moved-from image can be assigned to again") {
+    Image source = makeNumbered();
+    const Image moved(std::move(source));
+
+    source = moved; // NOLINT(bugprone-use-after-move,clang-analyzer-cplusplus.Move): under test
+
+    CHECK(isNumbered(source));
+    CHECK(source.getData() != moved.getData());
+}

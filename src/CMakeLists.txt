@@ -11,5 +11,6 @@ add_executable(paoo
     demos/lab4.cpp
     demos/lab4_order_a.cpp
     demos/lab4_order_b.cpp
+    demos/lab5.cpp
 )
 target_link_libraries(paoo PRIVATE image_lib CLI11::CLI11 paoo_warnings)
