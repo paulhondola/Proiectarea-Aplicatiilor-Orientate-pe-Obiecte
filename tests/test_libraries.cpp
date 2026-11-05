@@ -8,7 +8,7 @@
 
 TEST_CASE("stb writes and reads a PNG") {
     const char* path = "stb_round_trip.png";
-    std::vector<unsigned char> pixels(4 * 4 * 3, 200);
+    std::vector<unsigned char> pixels(48, 200);
     REQUIRE(stbi_write_png(path, 4, 4, 3, pixels.data(), 4 * 3) != 0);
 
     int width = 0;

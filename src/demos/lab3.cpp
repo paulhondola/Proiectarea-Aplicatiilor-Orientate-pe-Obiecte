@@ -117,6 +117,8 @@ void demoMoveConstructor() {
     std::cout << "  copy took " << copyTime << " us, move took " << moveTime << " us\n";
     check(copied.getData() != address, "the copy allocated a new buffer");
     check(moved.getData() == address, "the move kept the same buffer");
+    // Reading a moved-from Image is safe by design: its move constructor leaves it empty.
+    // NOLINTNEXTLINE(bugprone-use-after-move,clang-analyzer-cplusplus.Move)
     check(source.isEmpty() && source.getData() == nullptr, "the move emptied the source");
 }
 

@@ -93,7 +93,7 @@ TEST_CASE("copy is deep") {
 
 TEST_CASE("copy of empty is empty") {
     const Image original;
-    const Image copy(original);
+    const Image copy(original); // NOLINT(performance-unnecessary-copy-initialization): under test
     CHECK(copy.isEmpty());
     CHECK(copy.getData() == nullptr);
 }
@@ -106,8 +106,11 @@ TEST_CASE("move takes the buffer") {
 
     CHECK(target.getData() == address);
     CHECK(isNumbered(target));
+    // Reading a moved-from Image is safe by design: this is what the test proves.
+    // NOLINTBEGIN(bugprone-use-after-move,clang-analyzer-cplusplus.Move)
     CHECK(source.isEmpty());
     CHECK(source.getData() == nullptr);
     CHECK(source.getWidth() == 0);
     CHECK(source.getByteCount() == 0);
+    // NOLINTEND(bugprone-use-after-move,clang-analyzer-cplusplus.Move)
 }

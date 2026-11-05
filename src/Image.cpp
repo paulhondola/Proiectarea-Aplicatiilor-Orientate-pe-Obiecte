@@ -3,10 +3,10 @@
 #include "Logger.hpp"
 
 #include <algorithm>
+#include <exception>
 #include <limits>
 #include <sstream>
 #include <stdexcept>
-#include <string>
 
 namespace {
 
@@ -18,17 +18,24 @@ std::size_t checkedByteCount(int width, int height, int channels) {
         throw std::invalid_argument("Image channels must be between 1 and 4");
     }
     const std::size_t limit = std::numeric_limits<std::size_t>::max();
-    const std::size_t rowBytes = static_cast<std::size_t>(width) * static_cast<std::size_t>(channels);
+    const std::size_t rowBytes =
+        static_cast<std::size_t>(width) * static_cast<std::size_t>(channels);
     if (static_cast<std::size_t>(height) > limit / rowBytes) {
         throw std::invalid_argument("Image is too large to address");
     }
     return rowBytes * static_cast<std::size_t>(height);
 }
 
-void traceBuffer(const std::string& action, const void* buffer) {
-    std::ostringstream message;
-    message << "[" << action << "] buffer " << buffer;
-    Logger::instance().trace(message.str());
+// Never throws, because the destructor and the move constructor rely on it.
+// The action is a plain pointer so that calling this builds no temporary string.
+void traceBuffer(const char* action, const void* buffer) noexcept {
+    try {
+        std::ostringstream message;
+        message << "[" << action << "] buffer " << buffer;
+        Logger::instance().trace(message.str());
+        // NOLINTNEXTLINE(bugprone-empty-catch): a failed log line must not end the program.
+    } catch (const std::exception&) {
+    }
 }
 
 } // namespace
@@ -114,7 +121,8 @@ std::size_t Image::offsetOf(int x, int y, int channel) const {
     if (x < 0 || x >= width || y < 0 || y >= height || channel < 0 || channel >= channels) {
         throw std::out_of_range("Image coordinate is out of range");
     }
-    const std::size_t rowBytes = static_cast<std::size_t>(width) * static_cast<std::size_t>(channels);
+    const std::size_t rowBytes =
+        static_cast<std::size_t>(width) * static_cast<std::size_t>(channels);
     return static_cast<std::size_t>(y) * rowBytes +
            static_cast<std::size_t>(x) * static_cast<std::size_t>(channels) +
            static_cast<std::size_t>(channel);

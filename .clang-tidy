@@ -1,0 +1,9 @@
+# Raw-pointer ownership checks stay off, because the labs grade writing it by hand.
+# EnumCastOutOfRange only fires inside Catch2's flag operators.
+Checks: >-
+  bugprone-*,
+  clang-analyzer-*,
+  performance-*,
+  -bugprone-easily-swappable-parameters,
+  -clang-analyzer-optin.core.EnumCastOutOfRange
+HeaderFilterRegex: '.*/inc/.*'

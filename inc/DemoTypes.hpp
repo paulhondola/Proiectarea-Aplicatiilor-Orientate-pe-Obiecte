@@ -21,7 +21,8 @@ struct ShallowImage {
 class FilterPreset {
 public:
     FilterPreset(const std::string& presetName, int presetRadius)
-        : name(presetName), radius(presetRadius) {}
+        : name(presetName), radius(presetRadius) {
+    }
 
     const std::string name;
     const int radius;

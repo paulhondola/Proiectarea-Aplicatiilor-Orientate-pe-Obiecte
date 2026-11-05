@@ -7,7 +7,8 @@ Logger& Logger::instance() {
     return logger;
 }
 
-Logger::Logger() : enabled(false) {}
+Logger::Logger() : enabled(false) {
+}
 
 void Logger::setEnabled(bool newEnabled) {
     enabled = newEnabled;

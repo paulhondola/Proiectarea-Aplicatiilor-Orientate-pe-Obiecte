@@ -16,9 +16,7 @@ void runDemos(int lab) {
     std::cout << "\nAll checks passed.\n";
 }
 
-} // namespace
-
-int main(int argc, char** argv) {
+int run(int argc, char** argv) {
     CLI::App app{"Image filter tool and C++ lifecycle demos"};
 
     int lab = 0;
@@ -31,13 +29,19 @@ int main(int argc, char** argv) {
     }
     CLI11_PARSE(app, argc, argv);
 
+    if (demo->parsed()) {
+        runDemos(lab);
+    }
+    return 0;
+}
+
+} // namespace
+
+int main(int argc, char** argv) {
     try {
-        if (demo->parsed()) {
-            runDemos(lab);
-        }
+        return run(argc, argv);
     } catch (const std::exception& error) {
         std::cerr << "Error: " << error.what() << "\n";
         return 1;
     }
-    return 0;
 }

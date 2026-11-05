@@ -1,0 +1,20 @@
+pre-commit:
+  commands:
+    format:
+      glob: "*.{cpp,hpp}"
+      exclude:
+        - "third_party/**"
+      run: PATH="$(brew --prefix llvm)/bin:$PATH" clang-format -i {staged_files}
+      stage_fixed: true
+
+pre-push:
+  piped: true
+  commands:
+    1_format:
+      run: scripts/verify.sh format
+    2_lint:
+      run: scripts/verify.sh lint
+    3_cmake:
+      run: scripts/verify.sh cmake-debug
+    4_meson:
+      run: scripts/verify.sh meson-debug

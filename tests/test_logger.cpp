@@ -14,12 +14,15 @@ namespace {
 // Captures std::cout, and leaves the Logger disabled for the next test.
 class CoutCapture {
 public:
-    CoutCapture() : previous(std::cout.rdbuf(captured.rdbuf())) {}
+    CoutCapture() : previous(std::cout.rdbuf(captured.rdbuf())) {
+    }
     ~CoutCapture() {
         std::cout.rdbuf(previous);
         Logger::instance().setEnabled(false);
     }
-    std::string text() const { return captured.str(); }
+    std::string text() const {
+        return captured.str();
+    }
 
 private:
     std::ostringstream captured;

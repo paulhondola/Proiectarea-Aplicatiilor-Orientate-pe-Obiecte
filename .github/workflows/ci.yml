@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  HOMEBREW_NO_AUTO_UPDATE: "1"
+
+jobs:
+  format-lint:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install llvm meson ninja
+      - run: scripts/verify.sh format
+      - run: scripts/verify.sh cmake-debug
+      - run: scripts/verify.sh lint
+
+  cmake:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: scripts/verify.sh cmake-debug
+      - run: scripts/verify.sh cmake-release
+
+  meson:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install meson ninja
+      - run: scripts/verify.sh meson-debug
+      - run: scripts/verify.sh meson-release
+
+  sanitize:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install meson ninja
+      - run: scripts/verify.sh sanitize
+
+  leaks:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: scripts/verify.sh cmake-debug
+      - run: scripts/verify.sh leaks
