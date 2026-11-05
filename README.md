@@ -2,7 +2,7 @@
 
 ## Curs UPT AC Calculatoare Anul 4
 
-A command-line image filter tool that also demonstrates the C++ concepts graded in Lucrarea 3, 4 and 5. Later labs extend the same application.
+A command-line image filter tool that also demonstrates the C++ concepts.
 
 ## Prerequisites
 
