@@ -6,24 +6,6 @@
 #include <iostream>
 #include <type_traits>
 
-namespace {
-
-// Item 4: the same result, reached in two different ways.
-struct AssignsInBody {
-    Probe probe;
-    explicit AssignsInBody(const Probe& source) {
-        probe = source;
-    }
-};
-
-struct UsesInitList {
-    Probe probe;
-    explicit UsesInitList(const Probe& source) : probe(source) {
-    }
-};
-
-} // namespace
-
 // Item 5: everything the compiler writes for a class that declares nothing.
 struct PlainStruct {
     int id = 0;
@@ -45,8 +27,9 @@ static_assert(!std::is_default_constructible<HasOwnConstructor>::value, "own cto
 // Item 5: the compiler refuses to write operator= when it can't assign a const member.
 static_assert(!std::is_copy_assignable<FilterPreset>::value, "const members block operator=");
 
-// Item 6: the book's C++03 form. Declared private and never defined, so outsiders
-// get a compile error, and members or friends get a link error.
+// Item 6: the book's C++03 form. The base declares its copy functions private and never
+// defines them. A derived class's generated copy functions can't call them, so its own
+// members and friends get a compile error instead of a link error.
 class Uncopyable {
 protected:
     Uncopyable() = default;
@@ -85,23 +68,7 @@ void demoInitializationVersusAssignment() {
     printHeading("Item 4: initialize members instead of assigning them");
     std::cout << "A member not named in the initializer list is default-constructed first,\n"
               << "so assigning in the constructor body does the work twice.\n";
-    const Probe source;
-
-    Probe::reset();
-    const AssignsInBody assigned(source);
-    std::cout << "  assignment in the body: " << Probe::defaultConstructions << " default, "
-              << Probe::copyAssignments << " assignment, " << Probe::copyConstructions << " copy\n";
-    check(Probe::defaultConstructions == 1 && Probe::copyAssignments == 1 &&
-              Probe::copyConstructions == 0,
-          "assigning in the body costs a default construction and an assignment");
-
-    Probe::reset();
-    const UsesInitList listed(source);
-    std::cout << "  initializer list:       " << Probe::defaultConstructions << " default, "
-              << Probe::copyAssignments << " assignment, " << Probe::copyConstructions << " copy\n";
-    check(Probe::defaultConstructions == 0 && Probe::copyAssignments == 0 &&
-              Probe::copyConstructions == 1,
-          "an initializer list costs one copy construction");
+    compareInitializationCost();
 }
 
 void demoDeclarationOrder() {
@@ -158,9 +125,11 @@ void demoDisallowingFunctions() {
     printHeading("Item 6: disallow generated functions you don't want");
     std::cout << "Only one Logger should exist, so its copy functions are marked = delete, and\n"
               << "any attempt to use them is a clear compile error.\n"
-              << "Before C++11, classes declared them private and never defined them, usually\n"
-              << "through a base like Uncopyable. Mistakes inside the class then appeared only\n"
-              << "at link time, which is why = delete is better. The static_asserts in this\n"
+              << "Before C++11, a class declared them private and never defined them. That\n"
+              << "stops outsiders, but a member or friend that copies fails only at link time.\n"
+              << "An Uncopyable base moves that error to compile time, because the compiler\n"
+              << "can't generate a copy for a class whose base can't be copied. = delete gives\n"
+              << "a compile error everywhere, with a clear message. The static_asserts in this\n"
               << "file prove both forms at compile time.\n";
     check(&Logger::instance() == &Logger::instance(), "there is exactly one Logger");
 }

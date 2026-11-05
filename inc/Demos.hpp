@@ -19,6 +19,10 @@ inline void printHeading(const std::string& title) {
     std::cout << "\n--- " << title << " ---\n";
 }
 
+// Counts what assigning in a constructor body costs against an initializer list. Lucrarea 3
+// and Item 4 both show it.
+void compareInitializationCost();
+
 void runLab3();
 void runLab4();
 void runLab5();

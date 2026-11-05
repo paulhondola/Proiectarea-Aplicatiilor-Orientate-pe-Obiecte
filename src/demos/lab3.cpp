@@ -19,6 +19,44 @@ template <typename Exception, typename Action> bool throws(Action action) {
     return false;
 }
 
+// Two constructors with the same result, reached in different ways.
+struct AssignsInBody {
+    Probe probe;
+    explicit AssignsInBody(const Probe& source) {
+        probe = source;
+    }
+};
+
+struct UsesInitList {
+    Probe probe;
+    explicit UsesInitList(const Probe& source) : probe(source) {
+    }
+};
+
+// Counts the buffers still allocated, with and without delete[] in a destructor.
+int allocatedBuffers = 0;
+
+unsigned char* allocateBuffer() {
+    ++allocatedBuffers;
+    return new unsigned char[256]();
+}
+
+void freeBuffer(unsigned char* buffer) {
+    delete[] buffer;
+    --allocatedBuffers;
+}
+
+struct LeakyBuffer {
+    unsigned char* data = allocateBuffer();
+};
+
+struct OwningBuffer {
+    unsigned char* data = allocateBuffer();
+    ~OwningBuffer() {
+        freeBuffer(data);
+    }
+};
+
 void demoEncapsulation() {
     printHeading("Encapsulation");
     std::cout << "Pixels are private, so every access goes through a bounds check.\n";
@@ -40,7 +78,11 @@ void demoConstructorInitialization() {
               << "This relies on pixels being declared after the dimensions, because members\n"
               << "initialize in declaration order.\n"
               << "const members leave no choice: assigning to one in the constructor body does\n"
-              << "not compile, so FilterPreset must use the initializer list.\n";
+              << "not compile, so FilterPreset must use the initializer list.\n"
+              << "Other members allow assignment in the body, but it costs more, because the\n"
+              << "member is default-constructed first:\n";
+    compareInitializationCost();
+
     const Image image(3, 2, 4);
     check(image.getByteCount() == 24, "pixels were allocated from the initialized dimensions");
 
@@ -50,8 +92,27 @@ void demoConstructorInitialization() {
 
 void demoDestructor() {
     printHeading("Freeing the heap in the destructor");
-    std::cout << "Without delete[] in ~Image, every image leaves its pixels behind.\n"
-              << "Entering a scope:\n";
+    std::cout << "A class that allocates in its constructor has to free in its destructor, or\n"
+              << "every object leaves its buffer behind.\n";
+
+    unsigned char* leaked = nullptr;
+    {
+        const LeakyBuffer scoped;
+        leaked = scoped.data;
+    }
+    std::cout << "  LeakyBuffer has no delete[]: " << allocatedBuffers
+              << " buffer still allocated after the scope\n";
+    check(allocatedBuffers == 1, "without delete[] the buffer stays allocated after the scope");
+    freeBuffer(leaked); // Only this demo kept the pointer. A real leak has nothing left to free.
+
+    {
+        const OwningBuffer scoped;
+    }
+    std::cout << "  OwningBuffer has delete[]: " << allocatedBuffers
+              << " buffers still allocated after the scope\n";
+    check(allocatedBuffers == 0, "with delete[] no buffer is left allocated");
+
+    std::cout << "~Image frees its pixels the same way. Entering a scope:\n";
 
     std::ostringstream captured;
     std::streambuf* previous = std::cout.rdbuf(captured.rdbuf());
@@ -62,7 +123,7 @@ void demoDestructor() {
 
     std::cout << captured.str() << "Left the scope.\n";
     check(captured.str().find("Image dtor") != std::string::npos,
-          "leaving the scope ran the destructor, which frees the buffer");
+          "leaving the scope ran Image's destructor");
 }
 
 void demoCopyConstructor() {
@@ -123,6 +184,26 @@ void demoMoveConstructor() {
 }
 
 } // namespace
+
+void compareInitializationCost() {
+    const Probe source;
+
+    Probe::reset();
+    const AssignsInBody assigned(source);
+    std::cout << "  assignment in the body: " << Probe::defaultConstructions << " default, "
+              << Probe::copyAssignments << " assignment, " << Probe::copyConstructions << " copy\n";
+    check(Probe::defaultConstructions == 1 && Probe::copyAssignments == 1 &&
+              Probe::copyConstructions == 0,
+          "assigning in the body costs a default construction and an assignment");
+
+    Probe::reset();
+    const UsesInitList listed(source);
+    std::cout << "  initializer list:       " << Probe::defaultConstructions << " default, "
+              << Probe::copyAssignments << " assignment, " << Probe::copyConstructions << " copy\n";
+    check(Probe::defaultConstructions == 0 && Probe::copyAssignments == 0 &&
+              Probe::copyConstructions == 1,
+          "an initializer list costs one copy construction");
+}
 
 void runLab3() {
     std::cout << "\n=== Lucrarea 3: object lifetime ===\n";

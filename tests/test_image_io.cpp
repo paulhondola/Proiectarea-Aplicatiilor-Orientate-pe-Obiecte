@@ -98,3 +98,24 @@ TEST_CASE("save errors throw runtime_error") {
     CHECK_THROWS_AS(saveImage(image, "io_missing_directory/out.png"), std::runtime_error);
     CHECK_THROWS_AS(saveImage(Image(), "io_empty.png"), std::runtime_error);
 }
+
+TEST_CASE("JPEG rejects dimensions its format can't store") {
+    const TemporaryFile wide("io_too_wide.jpg");
+    const TemporaryFile tall("io_too_tall.jpeg");
+    CHECK_THROWS_AS(saveImage(Image(70000, 1, 1), wide.path), std::runtime_error);
+    CHECK_THROWS_AS(saveImage(Image(1, 70000, 1), tall.path), std::runtime_error);
+    CHECK_FALSE(std::ifstream(wide.path).good());
+}
+
+TEST_CASE("JPEG accepts the largest dimension it can store") {
+    const TemporaryFile file("io_widest.jpg");
+    saveImage(Image(65535, 1, 1), file.path);
+    CHECK(loadImage(file.path).getWidth() == 65535);
+}
+
+TEST_CASE("a successful save leaves no temporary file") {
+    const TemporaryFile file("io_clean.png");
+    saveImage(makePattern(2, 2, 3), file.path);
+    CHECK(std::ifstream(file.path).good());
+    CHECK_FALSE(std::ifstream(file.path + ".tmp").good());
+}

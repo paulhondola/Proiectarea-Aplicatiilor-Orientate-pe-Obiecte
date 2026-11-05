@@ -134,7 +134,10 @@ void demoSelfAssignment() {
 
     std::vector<NaiveImage> naive(3, NaiveImage(16));
     naive[i] = naive[j];
-    std::cout << "  NaiveImage size after self-assignment: " << naive[i].getSize() << "\n";
+    std::cout << "  NaiveImage size after self-assignment: " << naive[i].getSize() << "\n"
+              << "operator= freed the buffer and cleared the size first. The source is the same\n"
+              << "object, so nothing is left to copy, and the image ends up empty.\n"
+              << "A version which keeps the dimensions would read freed memory instead.\n";
     check(naive[i].getSize() == 0, "self-assignment silently wipes a NaiveImage");
 
     std::vector<Image> images(3, Image(4, 4, 1));
@@ -199,8 +202,8 @@ void demoForgottenBase() {
 
 void demoCopyingAllParts() {
     printHeading("Item 12: copy all parts of an object");
-    std::cout << "Once you write copy functions yourself, the compiler stops warning you about\n"
-              << "anything they miss.\n";
+    std::cout << "Once you write copy functions yourself, the compiler no longer copies members\n"
+              << "for you, and it says nothing when you miss a part.\n";
     demoForgottenMember();
     demoForgottenBase();
     std::cout << "\nPart C: sharing code between the two copy functions.\n"

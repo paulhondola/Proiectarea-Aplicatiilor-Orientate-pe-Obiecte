@@ -72,6 +72,32 @@ cp "$sample" "$out/same.png"
 "$paoo" filter -i "$sample" -o "$out/rgba.jpg" -f invert >/dev/null 2>&1 ||
     fail "RGBA input to JPEG failed"
 
+# A failed write must be reported, and must leave an existing file intact. The file size
+# limit makes every write fail, as a full disk would. Output goes through a pipe, because
+# a file would hit the same limit.
+cp "$sample" "$out/limited.png"
+if message=$( (
+    trap '' XFSZ
+    ulimit -f 0
+    "$paoo" filter -i "$out/limited.png" -o "$out/limited.png" -f invert
+) 2>&1); then
+    fail "failed write: expected a non-zero exit, got: $message"
+fi
+cmp -s "$sample" "$out/limited.png" || fail "a failed write damaged the existing file"
+[ ! -e "$out/limited.png.tmp" ] || fail "a failed write left a temporary file behind"
+
+# The demos must explain why each concept is needed.
+expect_demo_text() { # <lab> <text>
+    "$paoo" demo --lab "$1" | grep -qF "$2" || fail "lab $1 output is missing: $2"
+}
+expect_demo_text 3 "without delete[] the buffer stays allocated after the scope"
+expect_demo_text 3 "with delete[] no buffer is left allocated"
+expect_demo_text 3 "an initializer list costs one copy construction"
+expect_demo_text 4 "An Uncopyable base moves that error to compile time"
+expect_demo_text 5 "nothing is left to copy"
+expect_demo_text 5 "would read freed memory"
+expect_demo_text 5 "says nothing when you miss a part"
+
 if [ "$failures" -ne 0 ]; then
     echo "$failures check(s) failed"
     exit 1

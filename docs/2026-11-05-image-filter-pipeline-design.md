@@ -326,7 +326,7 @@ Each demo prints a short explanation, runs the example and verifies it with `che
 **Item 6: explicitly disallow unwanted functions**
 
 - `Logger` is the real example: `= delete`, because only one should exist. `static_assert` proves it.
-- A small class inheriting a private `Uncopyable` base shows the book's C++03 form. The text explains the older private-and-undefined approach and why its error appears later, at link time.
+- A small class inheriting a private `Uncopyable` base shows the book's C++03 form. The text explains the older private-and-undefined approach, whose error appears at link time for members and friends, how the `Uncopyable` base moves that error to compile time, and why `= delete` is clearer than both.
 
 ### Lucrarea 5
 
