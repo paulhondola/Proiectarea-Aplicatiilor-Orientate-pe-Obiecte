@@ -4,6 +4,7 @@ image_lib = static_library(
   'image_lib',
   'Filters.cpp',
   'Image.cpp',
+  'ImageIO.cpp',
   'LabeledImage.cpp',
   'Logger.cpp',
   include_directories: inc_dir,

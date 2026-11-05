@@ -76,6 +76,11 @@ step_leaks() {
         cat build/leaks.log
         return 1
     }
+    leaks --atExit -- build/cmake-debug/src/paoo filter -i tests/data/sample.png \
+        -o build/leaks-out.png -f grayscale -f blur:2 >build/leaks.log 2>&1 || {
+        cat build/leaks.log
+        return 1
+    }
 }
 
 ALL_STEPS="format lint cmake-debug cmake-release meson-debug meson-release parity sanitize leaks"
