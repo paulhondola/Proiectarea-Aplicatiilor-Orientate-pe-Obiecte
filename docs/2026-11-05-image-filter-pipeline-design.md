@@ -55,6 +55,8 @@ These would make the work a failure even if it ran:
 - Paul builds and shows the labs on his own Mac, so builds only need to be proven there. Downloading CLI11 and Catch2 on the first build is acceptable, and no Linux or Windows support is required.
 - Memory leaks on macOS are checked with `leaks --atExit --`.
 - The project has a lefthook file and CI covering formatting, linting, tests, ASan and UBSan.
+- The executable is named `paoo`.
+- The project uses the latest C++ standard: C++26, or C++23 if the compiler doesn't offer it.
 
 ### Made by the design author (open to change)
 
@@ -63,7 +65,6 @@ These would make the work a failure even if it ran:
 - `LabeledImage` as the Lucrarea 5 derived class.
 - `Logger` as the Item 4 and Item 6 example.
 - Removing `SensorLogger` from the tree, with a `lab3-sensor-logger` git tag kept locally on the last commit that contains it.
-- Staying on C++14.
 - `scripts/verify.sh` passes at the end of each lab's commits, so Lucrarea 3, 4 and 5 each leave a working checkpoint.
 - Which checks run in which hook, and CI running on macOS only (section 8).
 
@@ -79,11 +80,11 @@ These would make the work a failure even if it ran:
 
 ## 5. Application behaviour
 
-The executable stays named `PAOO`. All visible text is in English, matching the existing code.
+The executable is named `paoo`. All visible text is in English, matching the existing code.
 
 ```text
-PAOO demo [--lab 3|4|5]
-PAOO filter -i <input> -o <output> -f <filter> [-f <filter> ...]
+paoo demo [--lab 3|4|5]
+paoo filter -i <input> -o <output> -f <filter> [-f <filter> ...]
 ```
 
 Running with no subcommand prints help and exits non-zero.
@@ -145,10 +146,10 @@ third_party/stb/
 **Targets, the same in both builds:**
 
 - `image_lib`: static library with `Image`, `LabeledImage`, `Filters`, `ImageIO` and `Logger`.
-- `PAOO`: executable with `main.cpp` and every file in `src/demos/`.
+- `paoo`: executable with `main.cpp` and every file in `src/demos/`.
 - `paoo_tests`: Catch2 test executable.
 
-**Demo files must be compiled directly into `PAOO`, not into `image_lib`.** A linker can drop an unreferenced object file from a static library, along with its global constructors, and the Item 4 demo depends on those constructors.
+**Demo files must be compiled directly into `paoo`, not into `image_lib`.** A linker can drop an unreferenced object file from a static library, along with its global constructors, and the Item 4 demo depends on those constructors.
 
 Demo-only types stay inside their demo file unless two labs share them, in which case they go in `DemoTypes.hpp`.
 
@@ -245,15 +246,15 @@ stb is vendored because WrapDB doesn't provide it. Both build systems then use t
 
 **Both builds must:**
 
-- Use C++14 with compiler extensions off.
+- Use C++26 with compiler extensions off, falling back to C++23 when the compiler doesn't offer it. CMake chooses by checking for `cxx_std_26` in `CMAKE_CXX_COMPILE_FEATURES`, and Meson uses `cpp_std=c++26,c++23`. Apple Clang 21 on the author's Mac was tested and selects C++26 in both.
 - Enable `-Wall -Wextra -Wpedantic` or equivalent for project code only, without `-Werror`. If a deliberately broken demo type triggers a warning, silence it locally with a comment explaining why.
 - Provide a sanitizer build: `-DPAOO_SANITIZE=ON` in CMake and `-Db_sanitize=address,undefined` in Meson.
 - List the same source files in the same order. The Item 4 demo prints the initialization order it observes.
-- Register the same tests: `paoo_tests`, `PAOO demo`, and a `PAOO filter` run on `tests/data/sample.png`. Test output files go in the build directory.
+- Register the same tests: `paoo_tests`, `paoo demo`, and a `paoo filter` run on `tests/data/sample.png`. Test output files go in the build directory.
 
-**CMake details:** raise the minimum to 3.14 for `FetchContent_MakeAvailable`, and split the build across the `CMakeLists.txt` files shown in section 6, because the Lucrarea 7 rubric refers to `CMakeLists.txt` files in the plural.
+**CMake details:** raise the minimum to 3.25, the first version that knows C++26, and split the build across the `CMakeLists.txt` files shown in section 6, because the Lucrarea 7 rubric refers to `CMakeLists.txt` files in the plural.
 
-**Meson details:** mirror the structure with `subdir()`. Commit the `.wrap` files, and ignore downloaded subproject folders and the Meson build directories in `.gitignore`. Raise `meson_version` if the wraps need it.
+**Meson details:** mirror the structure with `subdir()`. Commit the `.wrap` files, and ignore downloaded subproject folders and the Meson build directories in `.gitignore`. Set `meson_version` to at least 1.3.0 for the standard fallback list.
 
 **Networking:** the first build of either system needs internet access for CLI11 and Catch2.
 
@@ -266,7 +267,7 @@ stb is vendored because WrapDB doesn't provide it. Both build systems then use t
 | `cmake-debug`, `cmake-release` | Build and `ctest` |
 | `meson-debug`, `meson-release` | Build and `meson test` |
 | `sanitize` | ASan and UBSan builds under both systems, then their tests |
-| `leaks` | `leaks --atExit -- <PAOO> demo` and the `filter` smoke run, on a Debug build without sanitizers, because `leaks` can't inspect ASan-instrumented programs. Any leak fails the step. |
+| `leaks` | `leaks --atExit -- <paoo> demo` and the `filter` smoke run, on a Debug build without sanitizers, because `leaks` can't inspect ASan-instrumented programs. Any leak fails the step. |
 
 **Tool configuration:**
 
@@ -360,20 +361,20 @@ These are not built now, but nothing here may block them.
 |---|---|---|
 | **6** | `StbBuffer` RAII class in `ImageIO`, plus a choice of copying behaviour for Item 14. Filter coefficients shared by reference counting are one candidate. | `ImageIO` keeps stb calls private to one file. |
 | **7** | `Filter` interface with at least two subclasses wrapping the free functions. `Image` move assignment and operators. A `Pipeline` class and an `imgproc` namespace. | Filters keep a uniform `Image -> Image` shape. |
-| **8** | Stage threads passing `std::unique_ptr<LabeledImage>` through a bounded queue, and row threads inside filters. A hand-written semaphore using `std::mutex` and `std::condition_variable`, because `std::counting_semaphore` needs C++20. `std::lock_guard` in `Logger`. | Filters don't rely on global mutable state. `Logger` stays the only shared service. |
+| **8** | Stage threads passing `std::unique_ptr<LabeledImage>` through a bounded queue, and row threads inside filters. `std::counting_semaphore` for the queue limits, with a small RAII guard around it. `std::lock_guard` in `Logger`. | Filters don't rely on global mutable state. `Logger` stays the only shared service. |
 
 ## 11. Definition of done
 
 - `scripts/verify.sh` passes on the author's Mac, covering formatting, linting, all CMake and Meson configurations, sanitizer builds and `leaks`.
 - `lefthook install` works and both hooks run. The CI workflow passes once the branch is pushed.
-- `PAOO demo` prints the same checks and outcomes in Debug and Release. The Item 4 order value may differ between builds, and buffer addresses and timings will.
-- `PAOO filter -i tests/data/sample.png -o out.png -f grayscale -f blur:2` produces a valid image, and each error case in section 5 exits non-zero.
+- `paoo demo` prints the same checks and outcomes in Debug and Release. The Item 4 order value may differ between builds, and buffer addresses and timings will.
+- `paoo filter -i tests/data/sample.png -o out.png -f grayscale -f blur:2` produces a valid image, and each error case in section 5 exits non-zero.
 - Catch2 tests cover:
     - `Image` construction, bounds, deep copy, move, chained assignment, self-assignment and assignment between different sizes.
     - `LabeledImage` copy and assignment, including the base part.
     - Each filter on a tiny image with known output.
     - A lossless PNG save and load, and load failure.
-- Every Lucrarea 3, 4 and 5 item in sections 9 and `docs/task.md` has a demo a grader can find by running `PAOO demo --lab N`.
+- Every Lucrarea 3, 4 and 5 item in sections 9 and `docs/task.md` has a demo a grader can find by running `paoo demo --lab N`.
 - No `SensorLogger` code remains. `README.md` explains build and usage for both systems. `docs/cmake-vs-meson.md` reflects the new build. Old sensor documents stay, with a one-line note saying they are superseded.
 - Commits are organized by lab or concern, because the task grades organized commits.
 
@@ -381,7 +382,7 @@ Apple Clang has no LeakSanitizer, so the `leaks` step is what checks for memory 
 
 ## 12. Not yet verified
 
-- A probe building CLI11, Catch2 and stb together under both systems was blocked by the local permission policy, so it was not run. The versions and dependency names above come from published release and WrapDB metadata. **The first implementation task must prove this combination builds on C++14 under both systems before anything depends on it.** If a pinned version needs a newer standard, choose an older release of that library rather than raising the project standard.
+- A probe building CLI11, Catch2 and stb together under both systems was blocked by the local permission policy, so it was not run. The versions and dependency names above come from published release and WrapDB metadata. **The first implementation task must prove this combination builds on C++26 under both systems before anything depends on it.** If a pinned library doesn't build under C++26, try a newer release of it, then move the project to C++23.
 ## 13. Left to the builder
 
 - Exact demo wording and output layout.
