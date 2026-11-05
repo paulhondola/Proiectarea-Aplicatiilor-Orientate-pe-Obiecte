@@ -1,3 +1,5 @@
+> **Superseded:** this document describes the original `SensorLogger` topic. See [the image filter design](2026-11-05-image-filter-pipeline-design.md).
+
 # Lab 03 Design Spec — `SensorLogger` C++ Application
 
 **Date:** 2026-10-18  

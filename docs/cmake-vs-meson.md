@@ -1,88 +1,88 @@
-# CMake vs. Meson Comparison (`Lab_03`)
+# CMake vs. Meson Comparison
 
-This note compares [`CMakeLists.txt`](../CMakeLists.txt) and [`meson.build`](../meson.build) in `Lab/Paul/Lab_03`. Both build systems compile the exact same C++14 sources (`src/SensorLogger.cpp`, `src/main.cpp`, `inc/SensorLogger.hpp`) into the `sensor_lib` static library and `Lab_03` executable without modifying any project code.
+The project builds with both [CMake](../CMakeLists.txt) and [Meson](../meson.build). Both compile the same sources into the same targets, and run the same tests:
+
+- `stb_impl`: a static library that compiles stb with its warnings silenced
+- `image_lib`: a static library holding the application's classes
+- `paoo`: the executable, with `main.cpp` and the lab demos
+- `paoo_tests`: the Catch2 tests
+
+Every new source or test must be added to both. `scripts/verify.sh` checks that both still work.
 
 ---
 
-## 1. Side-by-Side Build Definitions
+## 1. Side-by-side
 
-### CMake (`CMakeLists.txt`)
+### Choosing the C++ standard
+
 ```cmake
-cmake_minimum_required(VERSION 3.10)
-
-project(Lab_03)
-
-set(CMAKE_CXX_STANDARD 14)
+if(cxx_std_26 IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+    set(CMAKE_CXX_STANDARD 26)
+else()
+    set(CMAKE_CXX_STANDARD 23)
+endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-
-add_library(sensor_lib STATIC
-    src/SensorLogger.cpp
-    inc/SensorLogger.hpp
-)
-
-target_include_directories(sensor_lib PUBLIC inc)
-
-add_executable(${PROJECT_NAME} src/main.cpp)
-
-target_link_libraries(${PROJECT_NAME} PUBLIC sensor_lib)
 ```
 
-### Meson (`meson.build`)
 ```meson
-project(
-  'Lab_03',
-  'cpp',
-  version : '1.0.0',
-  meson_version : '>= 0.56.0',
-  default_options : [
-    'cpp_std=c++14',
-    'warning_level=2',
-  ],
-)
+default_options: ['cpp_std=c++26,c++23', 'warning_level=3']
+```
 
-inc_dir = include_directories('inc')
+### Getting libraries
 
-sensor_lib = static_library(
-  'sensor_lib',
-  'src/SensorLogger.cpp',
-  include_directories : inc_dir,
-)
+CMake downloads them when it configures, at the versions written in `CMakeLists.txt`:
 
-sensor_dep = declare_dependency(
-  link_with : sensor_lib,
-  include_directories : inc_dir,
-)
+```cmake
+FetchContent_Declare(cli11
+    GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git
+    GIT_TAG v2.7.2
+    GIT_SHALLOW TRUE)
+FetchContent_MakeAvailable(cli11 catch2)
+```
 
-lab_exe = executable(
-  meson.project_name(),
-  'src/main.cpp',
-  dependencies : [sensor_dep],
-)
+Meson downloads them using `.wrap` files committed in `subprojects/`, created with `meson wrap install`:
 
-test('sensor_logger_lifecycle', lab_exe)
+```meson
+cli11_dep = dependency('CLI11', default_options: ['warning_level=0'])
+```
+
+WrapDB doesn't provide stb, so it's vendored in `third_party/stb`, and both systems use the same files.
+
+### Building the application
+
+```cmake
+add_executable(paoo main.cpp demos/lab3.cpp ...)
+target_link_libraries(paoo PRIVATE image_lib CLI11::CLI11 paoo_warnings)
+```
+
+```meson
+paoo = executable('paoo', 'main.cpp', 'demos/lab3.cpp', ..., dependencies: [image_dep, cli11_dep])
 ```
 
 ---
 
-## 2. Key Architectural Differences
+## 2. Key differences
 
 | Aspect | CMake | Meson |
 | :--- | :--- | :--- |
-| **Language & Paradigm** | Turing-complete scripting language with mutable global state and string expansion (`${PROJECT_NAME}`). | Non-Turing-complete, strongly-typed declarative DSL (no arbitrary user functions or global variable mutation side effects). |
-| **C++ Standard Setup** | Requires 3 imperative variable assignments (`CMAKE_CXX_STANDARD`, `CMAKE_CXX_STANDARD_REQUIRED`, `CMAKE_CXX_EXTENSIONS`). | Single declarative option `cpp_std=c++14` in `project(..., default_options: ...)`. Choosing `c++14` instead of `gnu++14` disables compiler extensions automatically. |
-| **Referencing Targets** | Targets are looked up by **string identifier** (`sensor_lib`, `${PROJECT_NAME}`). Typos in target names can sometimes be treated as raw linker flags (`-lsensor_lib`). | Functions return **first-class typed objects** (`inc_dir`, `sensor_lib`, `sensor_dep`, `lab_exe`). Referencing an undefined variable is an immediate parse error. |
-| **Transitive Headers (`PUBLIC` vs `declare_dependency`)** | `target_include_directories(sensor_lib PUBLIC inc)` mutates `sensor_lib` in place so any target calling `target_link_libraries(... sensor_lib)` automatically gets `-Iinc`. | `include_directories` on `static_library()` is **private** to building that library. To expose headers transitively like CMake's `PUBLIC`, Meson wraps the library and include object in `declare_dependency()`. |
-| **Out-of-Source Builds** | Allows in-source builds (`cmake .`) unless explicitly blocked, which can pollute the repository tree. | Enforces out-of-source builds by design (`meson setup <builddir>` refuses to run without a separate build directory). |
-| **Default Backend** | Defaults to Unix Makefiles on Linux/macOS unless `-G Ninja` is specified. | Defaults to **Ninja** everywhere for fast incremental builds. |
+| **Language** | A scripting language with global state and string expansion. | A declarative language that isn't Turing-complete, with typed objects. |
+| **Standard fallback** | Written by hand, checking the compiler's feature list. | Built in, as a list of standards to try. |
+| **Referencing targets** | By string name. A typo can be treated as a linker flag. | By variable. An undefined one is an immediate error. |
+| **Sharing headers** | `target_include_directories(... PUBLIC ...)` passes them to whatever links the target. | `declare_dependency()` wraps a library with its headers. |
+| **Warnings** | Added by hand through the `paoo_warnings` target, so they only apply to project code. | `warning_level=3` for the project, with subprojects set to 0. |
+| **Sanitizers** | A project option, `PAOO_SANITIZE`, adds the flags before libraries are fetched. | Built-in `b_sanitize`, which also needs `b_lundef=false` under Clang. |
+| **Build folders** | In-source builds are allowed unless blocked. | Always out of source. |
+| **Default backend** | Makefiles on macOS, unless `-G Ninja` is used. | Ninja. |
+| **Running tests** | Subproject tests are off by default here, so `ctest` runs only the project's. | `meson test` also runs subproject tests, so the project uses `--suite PAOO`. |
 
 ---
 
-## 3. CLI Workflow Comparison
+## 3. Commands
 
-| Step | CMake Command | Meson Command |
+| Step | CMake | Meson |
 | :--- | :--- | :--- |
-| **1. Configure** | `cmake -S . -B build` | `meson setup build_meson` |
-| **2. Compile** | `cmake --build build` | `meson compile -C build_meson` |
-| **3. Run Binary** | `./build/Lab_03` | `./build_meson/Lab_03` |
-| **4. Run Tests** | `ctest --test-dir build` *(if `enable_testing()` added)* | `meson test -C build_meson -v` |
+| **Configure** | `cmake -S . -B build/cmake-debug -DCMAKE_BUILD_TYPE=Debug` | `meson setup build/meson-debug --buildtype=debug` |
+| **Compile** | `cmake --build build/cmake-debug --parallel` | `meson compile -C build/meson-debug` |
+| **Test** | `ctest --test-dir build/cmake-debug --output-on-failure` | `meson test -C build/meson-debug --suite PAOO --print-errorlogs` |
+| **Run** | `build/cmake-debug/src/paoo` | `build/meson-debug/src/paoo` |

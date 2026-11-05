@@ -1,3 +1,5 @@
+> **Superseded:** this document describes the original `SensorLogger` topic. See [the image filter design](2026-11-05-image-filter-pipeline-design.md).
+
 # Lab 03 `SensorLogger` Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
