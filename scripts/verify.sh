@@ -16,67 +16,72 @@ project_files() { # <git pathspecs...>
     done
 }
 
-cmake_check() { # <build dir> <cmake args...>
-    local dir=$1
-    shift
-    cmake -S . -B "$dir" "$@"
-    cmake --build "$dir" --parallel
-    ctest --test-dir "$dir" --output-on-failure
+# One build directory per build system, reconfigured by each step: build/ for CMake, target/ for Meson.
+# Every option is passed on each configure so nothing leaks from the previous step.
+# Each check records its demo output in build/parity/ for the parity step.
+cmake_check() { # <label> <build type> <sanitize ON|OFF>
+    cmake -S . -B build -DCMAKE_BUILD_TYPE="$2" -DPAOO_SANITIZE="$3"
+    cmake --build build --parallel
+    ctest --test-dir build --output-on-failure
+    record_demo "$1" build/src/paoo
 }
 
-meson_check() { # <build dir> <meson args...>
-    local dir=$1
+meson_check() { # <label> <meson args...>
+    local label=$1
     shift
-    if [ -d "$dir/meson-info" ]; then
-        meson setup --reconfigure "$dir" "$@"
-    else
-        meson setup "$dir" "$@"
-    fi
-    meson compile -C "$dir"
-    meson test -C "$dir" --suite PAOO --print-errorlogs
+    meson setup --wipe target "$@" 2>/dev/null || meson setup target "$@"
+    meson compile -C target
+    meson test -C target --suite PAOO --print-errorlogs
+    record_demo "$label" target/src/paoo
+}
+
+record_demo() { # <label> <paoo binary>
+    mkdir -p build/parity
+    "$2" demo | grep '^\[PASS\]' | sort >"build/parity/$1"
 }
 
 step_format() {
     project_files 'inc/*.hpp' 'src/*.cpp' 'tests/*.cpp' | xargs clang-format --dry-run --Werror
 }
 step_lint() {
-    # Lint runs first in the full order, and only needs the compile database.
-    cmake -S . -B build/cmake-debug -DCMAKE_BUILD_TYPE=Debug >/dev/null
+    # Lint only needs the compile database.
+    cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DPAOO_SANITIZE=OFF >/dev/null
     # stb_impl.cpp only compiles third-party code.
     project_files 'src/*.cpp' 'tests/*.cpp' | grep -v 'src/stb_impl.cpp' |
-        xargs -P 8 -n 1 clang-tidy -p build/cmake-debug --quiet --warnings-as-errors='*' \
+        xargs -P 8 -n 1 clang-tidy -p build --quiet --warnings-as-errors='*' \
             "--extra-arg=-isysroot$(xcrun --show-sdk-path)" --extra-arg=-Wno-c2y-extensions
 }
-step_cmake_debug() { cmake_check build/cmake-debug -DCMAKE_BUILD_TYPE=Debug; }
-step_cmake_release() { cmake_check build/cmake-release -DCMAKE_BUILD_TYPE=Release; }
-step_meson_debug() { meson_check build/meson-debug --buildtype=debug; }
+step_cmake_debug() { cmake_check cmake-debug Debug OFF; }
+step_cmake_release() { cmake_check cmake-release Release OFF; }
+step_meson_debug() { meson_check meson-debug --buildtype=debug; }
 # b_ndebug makes Meson's Release define NDEBUG as CMake's does.
-step_meson_release() { meson_check build/meson-release --buildtype=release -Db_ndebug=if-release; }
+step_meson_release() { meson_check meson-release --buildtype=release -Db_ndebug=if-release; }
 step_sanitize() {
-    cmake_check build/cmake-sanitize -DCMAKE_BUILD_TYPE=Debug -DPAOO_SANITIZE=ON
+    cmake_check cmake-sanitize Debug ON
     # b_lundef must be off for sanitizers under Clang.
-    meson_check build/meson-sanitize --buildtype=debug \
+    meson_check meson-sanitize --buildtype=debug \
         -Db_sanitize=address,undefined -Db_lundef=false \
         -Dcpp_args=-fno-sanitize-recover=undefined -Dcpp_link_args=-fno-sanitize-recover=undefined
 }
 
 step_parity() {
-    local expected
-    expected=$(build/cmake-debug/src/paoo demo | grep '^\[PASS\]' | sort)
-    for dir in build/cmake-release build/meson-debug build/meson-release; do
-        if [ "$("$dir/src/paoo" demo | grep '^\[PASS\]' | sort)" != "$expected" ]; then
-            echo "$dir printed different checks from build/cmake-debug" >&2
+    # Compares the demo checks recorded by the other steps; run those first.
+    for label in cmake-release meson-debug meson-release; do
+        if ! diff -q build/parity/cmake-debug "build/parity/$label" >/dev/null; then
+            echo "$label printed different checks from cmake-debug" >&2
             return 1
         fi
     done
 }
 step_leaks() {
     # Needs a build without sanitizers: leaks cannot inspect ASan-instrumented programs.
-    leaks --atExit -- build/cmake-debug/src/paoo demo >build/leaks.log 2>&1 || {
+    cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DPAOO_SANITIZE=OFF >/dev/null
+    cmake --build build --parallel
+    leaks --atExit -- build/src/paoo demo >build/leaks.log 2>&1 || {
         cat build/leaks.log
         return 1
     }
-    leaks --atExit -- build/cmake-debug/src/paoo filter -i tests/data/sample.png \
+    leaks --atExit -- build/src/paoo filter -i tests/data/sample.png \
         -o build/leaks-out.png -f grayscale -f blur:2 >build/leaks.log 2>&1 || {
         cat build/leaks.log
         return 1

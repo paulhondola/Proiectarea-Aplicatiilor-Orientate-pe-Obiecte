@@ -4,7 +4,8 @@ pre-commit:
       glob: "*.{cpp,hpp}"
       exclude:
         - "third_party/**"
-      run: PATH="$(brew --prefix llvm)/bin:$PATH" clang-format -i {staged_files}
+      # xargs runs nothing when no files are staged; a bare clang-format would read stdin.
+      run: printf '%s\n' {staged_files} | PATH="$(brew --prefix llvm)/bin:$PATH" xargs clang-format -i
       stage_fixed: true
 
 pre-push:

@@ -21,34 +21,34 @@ Both build systems produce the same `paoo` executable and run the same tests.
 ### CMake
 
 ```bash
-cmake -S . -B build/cmake-debug -DCMAKE_BUILD_TYPE=Debug
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
 ```
 
 ```bash
-cmake --build build/cmake-debug --parallel
+cmake --build build --parallel
 ```
 
 ```bash
-ctest --test-dir build/cmake-debug --output-on-failure
+ctest --test-dir build --output-on-failure
 ```
 
-The executable is `build/cmake-debug/src/paoo`.
+The executable is `build/src/paoo`.
 
 ### Meson
 
 ```bash
-meson setup build/meson-debug --buildtype=debug
+meson setup target --buildtype=debug
 ```
 
 ```bash
-meson compile -C build/meson-debug
+meson compile -C target
 ```
 
 ```bash
-meson test -C build/meson-debug --suite PAOO --print-errorlogs
+meson test -C target --suite PAOO --print-errorlogs
 ```
 
-The executable is `build/meson-debug/src/paoo`.
+The executable is `target/src/paoo`.
 
 ## Usage
 
@@ -104,7 +104,7 @@ scripts/verify.sh sanitize
 | `lint` | `clang-tidy` on project sources |
 | `cmake-debug`, `cmake-release` | CMake build and tests |
 | `meson-debug`, `meson-release` | Meson build and tests |
-| `parity` | Every build prints the same demo checks |
+| `parity` | Every build prints the same demo checks (run the build steps first) |
 | `sanitize` | Tests under ASan and UBSan, in both build systems |
 | `leaks` | Memory leaks, using macOS `leaks --atExit --` |
 
