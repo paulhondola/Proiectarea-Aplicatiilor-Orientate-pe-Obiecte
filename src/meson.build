@@ -2,6 +2,7 @@ inc_dir = include_directories('../inc')
 
 image_lib = static_library(
   'image_lib',
+  'Image.cpp',
   'Logger.cpp',
   include_directories: inc_dir,
   dependencies: [stb_dep],

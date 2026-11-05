@@ -1,4 +1,5 @@
 add_library(image_lib STATIC
+    Image.cpp
     Logger.cpp
 )
 target_include_directories(image_lib PUBLIC ${PROJECT_SOURCE_DIR}/inc)
