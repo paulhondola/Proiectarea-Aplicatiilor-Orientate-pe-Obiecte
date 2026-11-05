@@ -2,30 +2,16 @@ project(
   'PAOO',
   'cpp',
   version: '1.0.0',
-  meson_version: '>= 0.56.0',
+  meson_version: '>= 1.3.0',
   default_options: [
-    'cpp_std=c++14',
+    'cpp_std=c++26,c++23',
     'warning_level=3',
   ],
 )
 
-inc_dir = include_directories('inc')
+cli11_dep = dependency('CLI11', default_options: ['warning_level=0'])
+catch2_dep = dependency('catch2-with-main', default_options: ['warning_level=0'])
 
-sensor_lib = static_library(
-  'sensor_lib',
-  'src/SensorLogger.cpp',
-  include_directories: inc_dir,
-)
-
-sensor_dep = declare_dependency(
-  link_with: sensor_lib,
-  include_directories: inc_dir,
-)
-
-lab_exe = executable(
-  meson.project_name(),
-  'src/main.cpp',
-  dependencies: [sensor_dep],
-)
-
-test('sensor_logger_lifecycle', lab_exe)
+subdir('third_party')
+subdir('src')
+subdir('tests')

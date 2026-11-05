@@ -4,3 +4,7 @@ build/
 # MacOS
 .DS_Store
 Icon?
+
+# Meson subprojects (downloaded through the committed .wrap files)
+subprojects/*/
+subprojects/packagecache/
