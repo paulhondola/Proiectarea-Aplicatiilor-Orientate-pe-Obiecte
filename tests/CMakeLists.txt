@@ -1,6 +1,7 @@
 add_executable(paoo_tests
     test_libraries.cpp
     test_image.cpp
+    test_labeled_image.cpp
     test_logger.cpp
 )
 target_link_libraries(paoo_tests PRIVATE image_lib Catch2::Catch2WithMain paoo_warnings)
