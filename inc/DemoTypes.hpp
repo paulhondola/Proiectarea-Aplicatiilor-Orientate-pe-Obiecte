@@ -28,4 +28,37 @@ public:
     const int radius;
 };
 
+// Counts its operations, to show what a class really does to its members.
+struct Probe {
+    inline static int defaultConstructions = 0;
+    inline static int copyConstructions = 0;
+    inline static int copyAssignments = 0;
+
+    Probe() {
+        ++defaultConstructions;
+    }
+    Probe(const Probe&) {
+        ++copyConstructions;
+    }
+    Probe& operator=(const Probe&) {
+        ++copyAssignments;
+        return *this;
+    }
+
+    static void reset() {
+        defaultConstructions = 0;
+        copyConstructions = 0;
+        copyAssignments = 0;
+    }
+};
+
+// Item 4: initialization order across source files. The definitions are in
+// lab4_order_a.cpp and lab4_order_b.cpp.
+constexpr int orderExpectedValue = 42;
+int orderDynamicValue() noexcept;
+extern int orderGlobalValue;
+int& orderLocalValue() noexcept;
+extern int orderCopiedAtStartup;
+extern int orderLocalAtStartup;
+
 #endif // DEMO_TYPES_HPP

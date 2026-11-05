@@ -13,6 +13,9 @@ void runDemos(int lab) {
     if (lab == 0 || lab == 3) {
         runLab3();
     }
+    if (lab == 0 || lab == 4) {
+        runLab4();
+    }
     std::cout << "\nAll checks passed.\n";
 }
 
@@ -21,7 +24,7 @@ int run(int argc, char** argv) {
 
     int lab = 0;
     CLI::App* demo = app.add_subcommand("demo", "Show why each graded C++ concept is needed");
-    demo->add_option("--lab", lab, "Run one lab instead of all of them")->check(CLI::Range(3, 3));
+    demo->add_option("--lab", lab, "Run one lab instead of all of them")->check(CLI::Range(3, 4));
 
     if (argc == 1) {
         std::cout << app.help();

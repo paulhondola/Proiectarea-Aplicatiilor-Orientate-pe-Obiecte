@@ -8,5 +8,8 @@ target_link_libraries(image_lib PUBLIC stb_impl PRIVATE paoo_warnings)
 add_executable(paoo
     main.cpp
     demos/lab3.cpp
+    demos/lab4.cpp
+    demos/lab4_order_a.cpp
+    demos/lab4_order_b.cpp
 )
 target_link_libraries(paoo PRIVATE image_lib CLI11::CLI11 paoo_warnings)

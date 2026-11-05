@@ -20,5 +20,6 @@ inline void printHeading(const std::string& title) {
 }
 
 void runLab3();
+void runLab4();
 
 #endif // DEMOS_HPP
