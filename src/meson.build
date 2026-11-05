@@ -2,6 +2,7 @@ inc_dir = include_directories('../inc')
 
 image_lib = static_library(
   'image_lib',
+  'Filters.cpp',
   'Image.cpp',
   'LabeledImage.cpp',
   'Logger.cpp',

@@ -1,6 +1,7 @@
 paoo_tests = executable(
   'paoo_tests',
   'test_libraries.cpp',
+  'test_filters.cpp',
   'test_image.cpp',
   'test_labeled_image.cpp',
   'test_logger.cpp',

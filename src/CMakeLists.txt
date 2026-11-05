@@ -1,4 +1,5 @@
 add_library(image_lib STATIC
+    Filters.cpp
     Image.cpp
     LabeledImage.cpp
     Logger.cpp
