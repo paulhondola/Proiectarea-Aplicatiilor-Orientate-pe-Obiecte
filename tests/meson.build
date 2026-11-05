@@ -7,3 +7,4 @@ paoo_tests = executable(
 )
 
 test('paoo_tests', paoo_tests)
+test('demo', paoo, args: ['demo'])

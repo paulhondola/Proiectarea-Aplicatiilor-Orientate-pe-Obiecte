@@ -17,5 +17,6 @@ image_dep = declare_dependency(
 paoo = executable(
   'paoo',
   'main.cpp',
+  'demos/lab3.cpp',
   dependencies: [image_dep, cli11_dep],
 )
